@@ -5,15 +5,36 @@ MOVE_CHOICES = ['rock', 'paper', 'scissors']
 MOVE_CHOICES_SHORTHAND = ['r', 'p', 's']
 TARGET_SCORE = 2
 
+STRATEGY_CHOICES = ['random', 'beatlast']
+
+def pick_move(strategy, last_player_move):
+  if strategy == 'random':
+    return random.choice(MOVE_CHOICES)
+  elif strategy == 'beatlast':
+    if last_player_move == 'rock':
+      return 'paper'
+    elif last_player_move == 'paper':
+      return 'scissors'
+    else:
+      return 'rock'
+  # Shouldn't happen, but it's good to have a default.
+  else:
+    print("Unexpected strategy: " + strategy)
+    return 'rock'
+
 # Defines the standard RPS game loop for a single match.
-def play_rps():
+def play_rps(strategy):
   # Initialize game variables
   keep_playing = True
   player_score = 0
   computer_score = 0
 
+  # Used by the 'beatlast' strategy - we need a random 'last' move
+  # for the first round!
+  last_player_move = random.choice(MOVE_CHOICES)
+
   print('')
-  print('New round!')
+  print('New round!  Target score: ' + str(TARGET_SCORE))
 
   # Main game loop
   while keep_playing:
@@ -34,7 +55,11 @@ def play_rps():
         player_move = 'scissors'
 
     # The computer should only select from the actual, longform names for the moves.
-    computer_move = random.choice(MOVE_CHOICES)
+    computer_move = pick_move(strategy, last_player_move)
+
+    # And NOW save the last player move; don't set it before the computer picks!
+    # (That affects strategy logic!)
+    last_player_move = player_move
 
     # Show and score the results!
     print('')
@@ -68,6 +93,7 @@ def play_rps():
 # Introduce the game.  Make it stand out with whitespace before and after.
 
 keep_playing = True
+strategy = 'random'
 
 while keep_playing == True:
   print('')
@@ -76,11 +102,23 @@ while keep_playing == True:
   print('=================================')
   print('')
 
-  menu_choice = input("(P)lay or (q)uit? ").lower().strip()
+  menu_choice = input("(P)lay, set (o)pponent, or (q)uit? ").lower().strip()
   if menu_choice == 'p' or menu_choice == 'play':
-    play_rps()
+    play_rps(strategy)
   elif menu_choice == 'q' or menu_choice == 'quit':
     keep_playing = False
+  elif menu_choice == 'o' or menu_choice == "opponent":
+    print('')
+    print("random:    picks move randomly")
+    print("beatlast:  picks the move that beats the player's last move")
+    print('')
+
+    strategy = input("Select strategy: ").lower().strip()
+
+    while (strategy not in STRATEGY_CHOICES):
+      print('Invalid selection.')
+      print('')
+      strategy = input("Select strategy: ").lower().strip()
   else:
     print('Invalid input - please try again.')
 

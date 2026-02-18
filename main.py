@@ -3,13 +3,26 @@ import random
 # Initialize game constants
 MOVE_CHOICES = ['rock', 'paper', 'scissors']
 MOVE_CHOICES_SHORTHAND = ['r', 'p', 's']
-TARGET_SCORE = 2
 
-STRATEGY_CHOICES = ['random', 'beatlast']
+LENGTH_CHOICES = ['2', '3', '4', '5', '6', '7']
+STRATEGY_CHOICES = ['random', 'beatlast', 'matchlast', 'nochange', 'surprise', 'rotate']
+
+# Holds the 'random' choice for the 'nochange' and 'rotate' strategies.
+locked_choice = random.choice(MOVE_CHOICES)
+
+# Default game options (configurable by the player)
+strategy = 'surprise'
+play_length = 5
 
 def pick_move(strategy, last_player_move):
+  global locked_choice
+
   if strategy == 'random':
     return random.choice(MOVE_CHOICES)
+  elif strategy == 'matchlast':
+    return last_player_move
+  elif strategy == 'nochange':
+    return locked_choice
   elif strategy == 'beatlast':
     if last_player_move == 'rock':
       return 'paper'
@@ -17,13 +30,24 @@ def pick_move(strategy, last_player_move):
       return 'scissors'
     else:
       return 'rock'
+  elif strategy == 'rotate':
+    # Gameplay makes no difference whether we rotate before or after picking the
+    # move, as long as we're consistent.
+    if locked_choice == 'rock':
+      locked_choice = 'paper'
+    elif locked_choice == 'paper':
+      locked_choice = 'scissors'
+    else:
+      locked_choice = 'rock'
+
+    return locked_choice
   # Shouldn't happen, but it's good to have a default.
   else:
     print("Unexpected strategy: " + strategy)
     return 'rock'
 
 # Defines the standard RPS game loop for a single match.
-def play_rps(strategy):
+def play_rps(strategy, max_score):
   # Initialize game variables
   keep_playing = True
   player_score = 0
@@ -34,7 +58,7 @@ def play_rps(strategy):
   last_player_move = random.choice(MOVE_CHOICES)
 
   print('')
-  print('New round!  Target score: ' + str(TARGET_SCORE))
+  print('New round!  Target score: ' + str(max_score))
 
   # Main game loop
   while keep_playing:
@@ -81,19 +105,25 @@ def play_rps(strategy):
     print('')
     print("Current score:  player = " + str(player_score) + ", computer = " + str(computer_score))
 
-    if player_score == TARGET_SCORE:
+    # Initialize the strategy display-string for the end-of-game report
+    strategy_display = strategy
+    if strategy == 'nochange':
+      strategy_display = strategy + " ("+locked_choice+")"
+
+    if player_score == max_score:
       print("Player wins!")
       keep_playing = False
-    elif computer_score == TARGET_SCORE:
+      print("Computer strategy was: " + strategy_display)
+    elif computer_score == max_score:
       print("Computer wins!")
       keep_playing = False
+      print("Computer strategy was: " + strategy_display)
 
   # End of "main game loop"
 
 # Introduce the game.  Make it stand out with whitespace before and after.
 
 keep_playing = True
-strategy = 'random'
 
 while keep_playing == True:
   print('')
@@ -102,15 +132,42 @@ while keep_playing == True:
   print('=================================')
   print('')
 
-  menu_choice = input("(P)lay, set (o)pponent, or (q)uit? ").lower().strip()
+  menu_choice = input("(P)lay, set (l)ength, set (o)pponent, or (q)uit? ").lower().strip()
   if menu_choice == 'p' or menu_choice == 'play':
-    play_rps(strategy)
+    # Do not change the user's selection, even if 'surprise'.
+    #
+    # Pick the true strategy and put it here, redoing the 'surprise' pick on
+    # each new game start.
+    game_strat = strategy
+    if game_strat == 'surprise':
+      while game_strat == 'surprise':
+        game_strat = random.choice(STRATEGY_CHOICES)
+    elif (game_strat == 'nochange') or (game_strat == 'rotate'):
+      # Set the computer's choice randomly on each new game start.
+      locked_choice = random.choice(MOVE_CHOICES)
+
+    # Launch the game session
+    play_rps(game_strat, play_length)
   elif menu_choice == 'q' or menu_choice == 'quit':
     keep_playing = False
+  elif menu_choice == 'l' or menu_choice == "length":
+    print('')
+    play_length = input("Select max score - 2 through 7: ").lower().strip()
+
+    while (play_length not in LENGTH_CHOICES):
+      print('Invalid selection.')
+      print('')
+      play_length = input("Select max score - 2 through 7: ").lower().strip()
+
+    play_length = int(play_length)
   elif menu_choice == 'o' or menu_choice == "opponent":
     print('')
     print("random:    picks move randomly")
     print("beatlast:  picks the move that beats the player's last move")
+    print("matchlast: picks the same move the player previously chose")
+    print("nochange:  chooses one move and sticks with it")
+    print("rotate:    chooses random start move, then rotates rock->paper->scissors->rock")
+    print("surprise:  randomly chooses any of the other strategies at game start")
     print('')
 
     strategy = input("Select strategy: ").lower().strip()
